@@ -1,7 +1,6 @@
-
-# Implement Artificial Potential Field as a Local Planner
-
-
+########################################################################################################################
+#                                           IMPLEMENTATION OF APF ALGORITHM                                         #
+########################################################################################################################
 # Importing libraries
 import numpy as np
 import matplotlib.pyplot as plt
@@ -63,8 +62,8 @@ class Parameters:
     def __init__(self):
         self.radius  = 2 # Influence radius of the potential field
         self.coef_attr = 1./700 # Coefficient of attraction
-        self.rows = 600 # Number of rows
-        self.cols = 600 # Number of columns
+        self.rows = 500 # Number of rows
+        self.cols = 500 # Number of columns
         self.coef_rep = 200 # Coefficient of repulsion
         self.n_iters = 700 # Number of iterations
 
@@ -99,7 +98,6 @@ def draw_gradient(f, nrows=500, ncols=500):
 def grid_map(obstacles, nrows=500, ncols=500):
     """ Obstacles dicretized map """
     grid = np.zeros((nrows, ncols));
-    # rectangular obstacles
     for obstacle in obstacles:
         x1 = m2grid(obstacle[0][1]); x2 = m2grid(obstacle[2][1])
         y1 = m2grid(obstacle[0][0]); y2 = m2grid(obstacle[2][0])
@@ -108,41 +106,60 @@ def grid_map(obstacles, nrows=500, ncols=500):
     return grid
 
 def combined_potential(obstacles_grid, goal, influence_radius=1, attractive_coef=1./700, repulsive_coef=200, nrows=500, ncols=500):
-    """ Repulsive potential """
+
     goal = m2grid(goal)
     d = dt(obstacles_grid==0)
     d2 = (d/100.) + 1 # Rescale and transform distances
-    d0 = influence_radius + 1
+    d0 = influence_radius 
     nu = repulsive_coef
     repulsive = nu*((1./d2 - 1./d0)**2)
     repulsive [d2 > d0] = 0
-    """ Attractive potential """
+
     [x, y] = np.meshgrid(np.arange(ncols), np.arange(nrows))
     xi = attractive_coef
     attractive = xi * ( (x - goal[0])**2 + (y - goal[1])**2 )
-    """ Combine terms """
-    total = attractive + repulsive
-    return total, attractive, repulsive
 
-if __name__ == '__main__':
+    total = attractive + repulsive
+    return total
+
+
+def gradient_planner_next(current_cell,APF_pot,Constants):
     
-   obstacles = [
-              np.array([[-1.0, 2.0], [0.5, 2.0], [0.5, 2.5], [-1.0, 2.5]]), # my table
-              np.array([[-1.0, 2.0], [0.5, 2.0], [0.5, 2.5], [-1.0, 2.5]]) + np.array([2.0, 0]), # Evgeny's table
-              np.array([[-2.0, -0.5], [-2.0, 1.0], [-2.5, 1.0], [-2.5, -0.5]]), # Roman's table
-              np.array([[-1.2, -1.2], [-1.2, -2.5], [-2.5, -2.5], [-2.5, -1.2]]), # mats
-              np.array([[2.0, 0.8], [2.0, -0.8], [2.5, -0.8], [2.5, 0.8]]), # Mocap table
+    [fy,fx] = np.gradient(-APF_pot)
+    y,x = np.array(m2grid(current_cell), dtype=int)
+    smooth_w = 20 # Smoothing window size 
+    v_x = np.mean(fx[x - int(smooth_w/2) : x + int(smooth_w/2), y - int(smooth_w/2) : y + int(smooth_w/2)])
+    v_y = np.mean(fy[x - int(smooth_w/2) : x + int(smooth_w/2), y - int(smooth_w/2) : y + int(smooth_w/2)])
+    dt = 0.01 / np.linalg.norm([v_x,v_y])
+    next_cell = current_cell + dt * np.array([v_x,v_y])*Constants.velocity_factor
     
-              # bugtrap
-              np.array([[0.5, 0], [1.5, 0.], [1.5, 0.3], [0.5, 0.3]]) + np.array([-0.7, -1.5]),
-              np.array([[0.5, 0.3], [0.8, 0.3], [0.8, 1.5], [0.5, 1.5]]) + np.array([-0.7, -1.5]),
-              np.array([[0.5, 1.5], [1.5, 1.5], [1.5, 1.8], [0.5, 1.8]]) + np.array([-0.7, -1.5]),
-              ] 
-   start = np.array([1.2, 1.0])
-   goal = np.array([1.5,  -1.4])
-   params = Parameters()
-   apf_potential  = APF(obstacles,start,goal,params) # Create the potential field object
-   path,potential = apf_potential.plan()
+    return next_cell,np.array([v_x,v_y])*Constants.velocity_factor
+
+
+########################################################################################################################
+#             Uncomment the following to run the code for APF algorithm                                                # 
+########################################################################################################################
+
+
+# if __name__ == '__main__':
+    
+#    obstacles = [
+#               np.array([[-1.0, 2.0], [0.5, 2.0], [0.5, 2.5], [-1.0, 2.5]]), # my table
+#               np.array([[-1.0, 2.0], [0.5, 2.0], [0.5, 2.5], [-1.0, 2.5]]) + np.array([2.0, 0]), # Evgeny's table
+#               np.array([[-2.0, -0.5], [-2.0, 1.0], [-2.5, 1.0], [-2.5, -0.5]]), # Roman's table
+#               np.array([[-1.2, -1.2], [-1.2, -2.5], [-2.5, -2.5], [-2.5, -1.2]]), # mats
+#               np.array([[2.0, 0.8], [2.0, -0.8], [2.5, -0.8], [2.5, 0.8]]), # Mocap table
+    
+#               # bugtrap
+#               np.array([[0.5, 0], [1.5, 0.], [1.5, 0.3], [0.5, 0.3]]) + np.array([-0.7, -1.5]),
+#               np.array([[0.5, 0.3], [0.8, 0.3], [0.8, 1.5], [0.5, 1.5]]) + np.array([-0.7, -1.5]),
+#               np.array([[0.5, 1.5], [1.5, 1.5], [1.5, 1.8], [0.5, 1.8]]) + np.array([-0.7, -1.5]),
+#               ] 
+#    start = np.array([1.2, 1.0])
+#    goal = np.array([1.5,  -1.4])
+#    params = Parameters()
+#    apf_potential  = APF(obstacles,start,goal,params) # Create the potential field object
+#    path,potential = apf_potential.plan()
 #    plt.figure = plt.figure(figsize=(10,10))
 #    draw_gradient(potential)
 #    plt.plot(path[:,0], path[:,1], 'r-')

@@ -11,18 +11,7 @@ import os
 import psutil
 
 
-def init_fonts(small=12, medium=16, big=26):
-    SMALL_SIZE = small
-    MEDIUM_SIZE = medium
-    BIGGER_SIZE = big
 
-    plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
-    plt.rc('axes', titlesize=BIGGER_SIZE)     # fontsize of the axes title
-    plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
-    plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-    plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-    plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
-    plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title\
         
 def waypts2setpts(P, params):
     """
@@ -76,10 +65,6 @@ def formation(num_robots, leader_des, v, l):
     if num_robots==8: return [des2, des3, des4, des5, des6, des7, des8]
     if num_robots==9: return [des2, des3, des4, des5, des6, des7, des8, des9]
     
-    return [des2, des3, des4]
-
-
-
 
 def normalize(vector):
 	if norm(vector)==0: return vector
@@ -92,17 +77,3 @@ def poses2polygons(poses, l=0.1):
         polygon = np.array([pose + [-l/2,-l/2], pose + [l/2,-l/2], pose + [l/2,l/2], pose + [-l/2,l/2]])
         polygons.append(polygon)
     return polygons
-
-def poly_area(x,y):
-    # https://stackoverflow.com/questions/24467972/calculate-area-of-polygon-given-x-y-coordinates
-    # https://en.wikipedia.org/wiki/Shoelace_formula
-    return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
-
-def path_length(pose_array):
-    length = 0
-    for i in range( 1,len(pose_array) ):
-        dl = np.linalg.norm(pose_array[i,:]-pose_array[i-1,:])
-        # if dl > 0.01 and dl < 0.2: length += dl
-        length += dl
-    return length
-

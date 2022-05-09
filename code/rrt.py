@@ -1,5 +1,6 @@
-# Implement a RRT* algorithm for a 2D environment
-
+########################################################################################################################
+#                                                   Implementation of RRT Algorithm                                    #                                                                                                        
+########################################################################################################################
 
 # Importing libraries
 import numpy as np
@@ -78,8 +79,8 @@ def closest_Node(p, nodes):
         dist.append(np.sqrt((node.p[0]-p[0])**2 + (node.p[1]-p[1])**2))
     dist = np.array(dist)
     
-    dist_min = np.min(dist)
-    dist_min_idx = np.argmin(dist)
+    dist_min = min(dist)
+    dist_min_idx =dist.tolist().index(dist_min)
     closestNode = nodes[dist_min_idx]
     
     return closestNode
@@ -111,21 +112,21 @@ def rrtpath(start, goal, obstacles,const):
     start_time = time.time()
     iterations = 0
     
-    print("Started RRT* algorithm...")
+    print("Started RRT algorithm...")
     
     while not reachedGoal:
         p_random = random() # Random position
         
-        if p_random < const.goal_prob:
+        if p_random < const.goal_prob: # Goal probability , we are sampling a goal position
             p = goal
         else :
-            
+            # Sample a random position in the world bounds and check if it is collision free 
             p_random =  np.array([random()*2*const.world_bounds_x[1] -const.world_bounds_x[1],random()*2*const.world_bounds_y[1]-const.world_bounds_y[1]])
 
             p = p_random
-        colFree = isCollisionFreeVertex(p, obstacles)
+        colFree = isCollisionFreeVertex(p, obstacles) # Check if p is collision free
         if not colFree:
-            iterations += 1
+            iterations += 1 # Increment iterations
             continue
         closestNode = closest_Node(p, path) # Closest node to p
         
@@ -190,85 +191,58 @@ def rrtpath(start, goal, obstacles,const):
     
     return goal_pts # Return path
 
-# def shortest_path(path,obstacles):
-#     """
-#     @param start: Start position
-#     @param goal: Goal position
-#     @param obstacles: List of obstacles
-#     @param const: const class containing the parameters of the algorithm
-    
-    
-#     @return: Smooth path from start to goal
-#     """
-#     smooth_iters = 10 # Number of iterations of the smoothing algorithm
-#     m = path.shape[0] # Number of nodes
-#     l = np.zeros(m) # List of lengths
-#     for i in range(1,m):
-#         l[i] = np.linalg.norm(path[i,:] - path[i-1,:]) + l[i-1] # Length of path from node i to node i-1
-        
-#     iterations = 0
-#     while iterations < smooth_iters:
-#         s1 = random()*l[-1] # Random length
-#         s2 = random()*l[-1] # Random length
-#         if s2 < s1:
-#             s1, s2 = s2, s1
-#         for i in range(1,m):
-#             if l[i] > s1:
-#                 i = i-1
      
 def ShortenPath(P, obstacles, smoothiters=10):
-    # INPUTS
-    #   P - path to get smoothed (after RRT algorithm)
-    #   obstacles - says where the obstacles are
-    #   smoothiters - maximum number of smoothing iterations
-    #
-    # OUTPUTS
-    #   P_smoothed - a path, same format as before:  
-    #    P_smoothed = [q1 q2 q3 ... qM]
-    #               where q1=qstart and qM=qgoal; in other words, the sequence
-    #               of straight-line paths from q1 to q2, q2 to q3, etc., takes
-    #               the robot from start to goal without collision
-    P = np.array(P)
-    m = P.shape[0]
-    l = np.zeros(m)
-    for k in range(1, m):
-        l[k] = np.linalg.norm(P[k,:]-P[k-1,:]) + l[k-1] # find all of the straight-line distances
+    """
+    @param start: Start position
+    @param goal: Goal position
+    @param obstacles: List of obstacles
+    @param const: const class containing the parameters of the algorithm
+    
+    
+    @return: Smooth path from start to goal
+    """
+
+    m = P.shape[0] # Number of points
+    l = np.zeros(m) # Length of path
+    for k in range(1, m): # Loop over path points
+        l[k] = np.linalg.norm(P[k,:]-P[k-1,:]) + l[k-1] # Length of path up to k (k=0 is the start)
     iters = 0
-    while iters < smoothiters:
-        s1 = random()*l[m-1] 
-        s2 = random()*l[m-1]
-        if s2 < s1:
-            temps = s1
+    while iters < smoothiters: # Smooth iterations
+        s1 = random()*l[m-1]  # Random length
+        s2 = random()*l[m-1] # Random length    
+        if s2 < s1: # Swap s1 and s2
+            temp = s1
             s1 = s2
-            s2 = temps
-        for k in range(1, m):
-            if s1 < l[k]:
-                i = k - 1
+            s2 = temp
+        for k in range(1, m): # Loop over path points 
+            if s1 < l[k]: # If s1 is less than length of path up to k
+                i = k - 1 # Index of point before s1 in path 
                 break
-        for k in range(i, m):
-            if s2 < l[k]:
-                j = k - 1
+        for k in range(i, m): # Loop over path points after i
+            if s2 < l[k]: # If s2 is less than length of path up to k
+                j = k - 1 # Index of point before s2 in path
                 break
-        if (j <= i):
-            iters = iters + 1
+        if (j <= i): # If s2 is not less than length of path up to k
+            iters = iters + 1 # Increment iterations
             continue
-        t1 = (s1 - l[i]) / (l[i+1]-l[i])
-        gamma1 = (1 - t1)*P[i,:] + t1*P[i+1,:]
-        t2 = (s2 - l[j]) / (l[j+1]-l[j])
-        gamma2 = (1 - t2)*P[j,:] + t2*P[j+1,:]
+        t1 = (s1 - l[i]) / (l[i+1]-l[i]) # Parameter t1 
+        gamma1 = (1 - t1)*P[i,:] + t1*P[i+1,:]  # Point on line between i and i+1
+        t2 = (s2 - l[j]) / (l[j+1]-l[j])    # Parameter t2
+        gamma2 = (1 - t2)*P[j,:] + t2*P[j+1,:] # Point on line between j and j+1
         
-        collisionFree = isCollisionFreeEdge(gamma1, gamma2, obstacles)
-        if collisionFree == 0:
-            iters = iters + 1
+        collisionFree = isCollisionFreeEdge(gamma1, gamma2, obstacles) # Check if line between gamma1 and gamma2 is collision free
+        if collisionFree == 0:  # If line between gamma1 and gamma2 is collision free
+            iters = iters + 1 # Increment iterations
             continue
 
-        P = np.vstack([P[:(i+1),:], gamma1, gamma2, P[(j+1):,:]])
-        m = P.shape[0]
-        l = np.zeros(m)
-        for k in range(1, m):
-            l[k] = np.linalg.norm( P[k,:] - P[k-1,:] ) + l[k-1]
-        iters = iters + 1
-    P_short = P 
+        P = np.vstack([P[:(i+1),:], gamma1, gamma2, P[(j+1):,:]]) # Replace path with new path
+        m = P.shape[0]  # Number of points
+        l = np.zeros(m)                                      # Length of path
+        for k in range(1, m): # Loop over path points
+            l[k] = np.linalg.norm( P[k,:] - P[k-1,:] ) + l[k-1] # Length of path up to k (k=0 is the start)
+        iters = iters + 1                                       # Increment iterations
+    P_short = P                                            # Short path
     
     return P_short
         
@@ -282,21 +256,18 @@ class const:
         self.world_bounds_y = [-2.5,2.5] # World bounds (y-axis)
     
         
-# class RRTstar:
-#     def __init__(self,start,goal,obstacles,max_iterations,max_length,goal_radius):
-#         self.start = start  # start node
-#         self.goal = goal  # goal node
-#         self.obstacles = obstacles  # obstacles
-        
-        
 
 
 
 def draw_map(obstacles):
-    # Obstacles. An obstacle is represented as a polygon of a number of points. 
-    # First row is x, second is y (position of vertices)
-
-    # Bounds on world
+    """
+    @breif: Draws the map of the environment
+    
+    @param obstacles: List of obstacles
+    
+    Returns: It draws the map of the environment
+    
+    """
     world_bounds_x = [-2.5, 2.5]
     world_bounds_y = [-2.5, 2.5]
 
@@ -307,41 +278,47 @@ def draw_map(obstacles):
     for k in range(len(obstacles)):
         ax.add_patch( Polygon(obstacles[k], color='k', zorder=10) )
 
-if __name__ == "__main__":
+
+
+
+########################################################################################################################
+#    Uncomment the below code to run the code for implementation of RRT algorithm                                   #   
+########################################################################################################################
+# if __name__ == "__main__":
     
-    start = np.array([1.2, 1.0])
-    goal =  np.array([2.1, -2.4])
-    const = const()
-    obstacles = [
-              np.array([[-1.0, 2.0], [0.5, 2.0], [0.5, 2.5], [-1.0, 2.5]]), # my table
-              np.array([[-1.0, 2.0], [0.5, 2.0], [0.5, 2.5], [-1.0, 2.5]]) + np.array([2.0, 0]), # Evgeny's table
-              np.array([[-2.0, -0.5], [-2.0, 1.0], [-2.5, 1.0], [-2.5, -0.5]]), # Roman's table
-              np.array([[-1.2, -1.2], [-1.2, -2.5], [-2.5, -2.5], [-2.5, -1.2]]), # mats
-              np.array([[2.0, 0.8], [2.0, -0.8], [2.5, -0.8], [2.5, 0.8]]), # Mocap table
+#     start = np.array([1.2, 1.0])
+#     goal =  np.array([2.1, -2.4])
+#     const = const()
+#     obstacles = [
+#               np.array([[-1.0, 2.0], [0.5, 2.0], [0.5, 2.5], [-1.0, 2.5]]), # my table
+#               np.array([[-1.0, 2.0], [0.5, 2.0], [0.5, 2.5], [-1.0, 2.5]]) + np.array([2.0, 0]), # Evgeny's table
+#               np.array([[-2.0, -0.5], [-2.0, 1.0], [-2.5, 1.0], [-2.5, -0.5]]), # Roman's table
+#               np.array([[-1.2, -1.2], [-1.2, -2.5], [-2.5, -2.5], [-2.5, -1.2]]), # mats
+#               np.array([[2.0, 0.8], [2.0, -0.8], [2.5, -0.8], [2.5, 0.8]]), # Mocap table
     
-              # bugtrap
-              np.array([[0.5, 0], [1.5, 0.], [1.5, 0.3], [0.5, 0.3]]) + np.array([-0.7, -1.5]),
-              np.array([[0.5, 0.3], [0.8, 0.3], [0.8, 1.5], [0.5, 1.5]]) + np.array([-0.7, -1.5]),
-              np.array([[0.5, 1.5], [1.5, 1.5], [1.5, 1.8], [0.5, 1.8]]) + np.array([-0.7, -1.5]),
-              ] 
+#               # bugtrap
+#               np.array([[0.5, 0], [1.5, 0.], [1.5, 0.3], [0.5, 0.3]]) + np.array([-0.7, -1.5]),
+#               np.array([[0.5, 0.3], [0.8, 0.3], [0.8, 1.5], [0.5, 1.5]]) + np.array([-0.7, -1.5]),
+#               np.array([[0.5, 1.5], [1.5, 1.5], [1.5, 1.8], [0.5, 1.8]]) + np.array([-0.7, -1.5]),
+#               ] 
     
-    passage_width = 0.3
-    passage_location = 0.0
-    # obstacles = [
-    #         # narrow passage
-    #           np.array([[-2.5, -0.5], [-passage_location-passage_width/2., -0.5], [-passage_location-passage_width/2., 0.5], [-2.5, 0.5]]),
-    #           np.array([[-passage_location+passage_width/2., -0.5], [2.5, -0.5], [2.5, 0.5], [-passage_location+passage_width/2., 0.5]]),
-    #         ]
-    fig2D = plt.figure(figsize=(10,10))
-    draw_map(obstacles)
-    plt.plot(start[0],start[1],'bo',color='red', markersize=20, label='start')
-    plt.plot(goal[0], goal[1],'bo',color='green', markersize=20, label='goal')
-    plt.title('RRT Algorithm')
-    p = rrtpath(start, goal, obstacles,const)
-    s_path  = ShortenPath(p,obstacles)
-    s_path = np.vstack([s_path,start])
-    plt.plot(s_path[:,0],s_path[:,1],'k',color='yellow', linewidth=3,markersize = 15, label='Smoothen path')
-    plt.legend()
-    plt.savefig('rrt.png', dpi=300)
-    plt.show()
-    plt.pause(10)
+#     passage_width = 0.3
+#     passage_location = 0.0
+#     # obstacles = [
+#     #         # narrow passage
+#     #           np.array([[-2.5, -0.5], [-passage_location-passage_width/2., -0.5], [-passage_location-passage_width/2., 0.5], [-2.5, 0.5]]),
+#     #           np.array([[-passage_location+passage_width/2., -0.5], [2.5, -0.5], [2.5, 0.5], [-passage_location+passage_width/2., 0.5]]),
+#     #         ]
+#     fig2D = plt.figure(figsize=(10,10))
+#     draw_map(obstacles)
+#     plt.plot(start[0],start[1],'bo',color='red', markersize=20, label='start')
+#     plt.plot(goal[0], goal[1],'bo',color='green', markersize=20, label='goal')
+#     plt.title('RRT Algorithm')
+#     p = rrtpath(start, goal, obstacles,const)
+#     s_path  = ShortenPath(p,obstacles)
+#     s_path = np.vstack([s_path,start])
+#     plt.plot(s_path[:,0],s_path[:,1],'k',color='yellow', linewidth=3,markersize = 15, label='Smoothen path')
+#     plt.legend()
+#     plt.savefig('rrt.png', dpi=300)
+#     plt.show()
+#     plt.pause(10)
